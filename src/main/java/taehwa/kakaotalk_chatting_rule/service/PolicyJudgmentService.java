@@ -24,15 +24,6 @@ public class PolicyJudgmentService {
 
     private static final Logger log = LoggerFactory.getLogger(PolicyJudgmentService.class);
 
-    private final MemberRepository memberRepository;
-    private final ViolationRecordRepository violationRecordRepository;
-    private final ViolationPolicyRepository violationPolicyRepository;
-    private final RestrictionService restrictionService;
-
-    private static final List<String> FORBIDDEN_WORDS = List.of(
-            "욕설1", "욕설2", "비속어"
-    );
-
     private static final List<String> ADVERTISEMENT_KEYWORDS = List.of(
             "http://", "https://", "무료상담", "부업", "수익보장", "카톡추가"
     );
@@ -41,8 +32,11 @@ public class PolicyJudgmentService {
             "(\\d{3}-\\d{3,4}-\\d{4})|(\\d{6}-[1-4]\\d{6})"
     );
 
-    private static final int SPAM_THRESHOLD_COUNT = 5;
-    private static final long SPAM_THRESHOLD_SECONDS = 10;
+    private final MemberRepository memberRepository;
+    private final ViolationRecordRepository violationRecordRepository;
+    private final ViolationPolicyRepository violationPolicyRepository;
+    private final RestrictionService restrictionService;
+    private final ForbiddenWordProvider forbiddenWordProvider;
 
     @Transactional
     public ViolationJudgmentResult judge(String kakaoUserId, String message) {
@@ -76,8 +70,7 @@ public class PolicyJudgmentService {
 
         restrictionService.applyRestriction(member, determinedLevel, reason);
 
-        log.info("위반 감지 - 사용자: [MASKED], 유형: {}, 결정: {}",
-                detectedType, determinedLevel);
+        log.info("위반 감지 - 사용자 [MASKED], 유형: {}, 결정: {}", detectedType, determinedLevel);
 
         return ViolationJudgmentResult.builder()
                 .violated(true)
@@ -101,8 +94,7 @@ public class PolicyJudgmentService {
     }
 
     private boolean containsForbiddenWord(String message) {
-        String lowerMessage = message.toLowerCase();
-        return FORBIDDEN_WORDS.stream().anyMatch(lowerMessage::contains);
+        return forbiddenWordProvider.contains(message);
     }
 
     private boolean containsAdvertisement(String message) {
