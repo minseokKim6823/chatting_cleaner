@@ -40,3 +40,4 @@ out/
 .codex
 .omx
 .env
+src/main/resources/moderation

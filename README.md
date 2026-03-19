@@ -1,55 +1,98 @@
 # kakaotalk_chatting_rule
 
-Spring Boot API server for:
+카카오톡 챗봇 웹훅 요청을 받아 채팅 위반 여부를 판별하고, 위반 이력과 제재 이력을 관리하는 Spring Boot API 서버입니다.
 
-- receiving Kakao chatbot webhook requests
-- judging chat-policy violations
-- storing violation and restriction history
-- managing manual admin restrictions
+## 프로젝트 개요
 
-## Requirements
+이 프로젝트는 아래 흐름을 기준으로 동작합니다.
+
+1. 카카오 챗봇 웹훅 요청을 수신합니다.
+2. 메시지에서 개인정보, 금칙어, 광고성 문구를 검사합니다.
+3. 위반이 감지되면 위반 기록을 저장합니다.
+4. 정책 기준에 따라 `WARNING`, `TEMPORARY_BAN`, `PERMANENT_BAN` 제재를 적용합니다.
+5. 관리자는 별도의 관리자 API로 수동 제재를 등록하거나 조회할 수 있습니다.
+
+## 기술 스택
 
 - Java 21
-- PowerShell or another terminal
+- Spring Boot 4.0.3
+- Spring Web
+- Spring Data JPA
+- Spring Security
+- H2 Database
+- springdoc-openapi (Swagger UI)
 
-## Run Locally
+## 실행 환경
 
-1. Check `.env`.
+- Java 21
+- PowerShell 또는 다른 터미널
 
-```powershell
-Get-Content .env
+## 설정 파일
+
+메인 설정 파일은 `src/main/resources/application.yml` 입니다.
+
+민감 정보는 `.env` 파일로 분리해서 사용합니다.
+
+예시:
+
+```env
+KAKAO_ADMIN_KEY=your_kakao_admin_key_here
 ```
 
-Example:
+현재 애플리케이션은 `.env` 파일의 `KAKAO_ADMIN_KEY` 값을 읽어서 `kakao.api.admin-key` 설정에 연결합니다.
 
-```properties
-KAKAO_ADMIN_KEY=your-kakao-admin-key
-```
+## 로컬 실행
 
-2. Start the app.
+1. `.env` 파일에 카카오 어드민 키를 입력합니다.
+2. 애플리케이션을 실행합니다.
 
 ```powershell
 .\gradlew.bat bootRun
 ```
 
-3. Open the app on `http://localhost:8080`.
+기본 포트는 `8080`입니다.
 
-If port `8080` is already in use, change `server.port` in `src/main/resources/application.yml`.
+## 확인 가능한 주소
 
-## Configuration
+- 애플리케이션: `http://localhost:8080`
+- Swagger UI: `http://localhost:8080/swagger-ui.html`
+- OpenAPI JSON: `http://localhost:8080/v3/api-docs`
+- H2 Console: `http://localhost:8080/h2-console`
+- 브리지 상태 확인: `http://localhost:8080/api/bridge/health`
 
-- Port: `8080`
-- Database: H2 in-memory
-- H2 console: `http://localhost:8080/h2-console`
-- Main config: `src/main/resources/application.yml`
+## 주요 기능
 
-Because the database is in-memory, all members, violations, and restrictions are reset when the app restarts.
+### 실제 단톡방 자동 경고 답장
 
-## Main APIs
+실제 카카오톡 단체방에 자동 경고 답장을 붙이려면 서버만으로는 안 되고, 안드로이드 알림 기반 봇 스크립트가 추가로 필요합니다.
 
-### 1) Kakao webhook test
+이 프로젝트에는 바로 붙여 넣어 쓸 수 있는 안드로이드 브리지 스크립트가 포함되어 있습니다.
 
-This simulates a Kakao chatbot callback.
+- 스크립트: `bot/android/kakao_warning_bot.js`
+- 가이드: `bot/android/README.md`
+
+### 1. 카카오 웹훅 수신
+
+- 경로: `POST /api/kakao/webhook`
+- 인증: 필요 없음
+
+요청 예시:
+
+```json
+{
+  "userRequest": {
+    "timezone": "Asia/Seoul",
+    "utterance": "010-1234-5678",
+    "lang": "ko",
+    "user": {
+      "id": "user-123",
+      "type": "accountId"
+    }
+  }
+}
+```
+
+PowerShell 예시:
 
 ```powershell
 $body = @{
@@ -71,25 +114,42 @@ Invoke-RestMethod `
   -Body $body
 ```
 
-Current judgment logic checks:
+현재 위반 탐지 기준:
 
-- personal info pattern
-- forbidden words
-- advertisement keywords
+- 개인정보 패턴
+- 금칙어 포함 여부
+- 광고성 키워드 포함 여부
 
-If a violation is detected, the app stores a violation record and creates a restriction result such as `WARNING`, `TEMPORARY_BAN`, or `PERMANENT_BAN`.
+## 관리자 API
 
-### 2) Create admin restriction
+관리자 API 경로는 `/api/admin/**` 이며 인증이 필요합니다.
 
-`/api/admin/**` requires authentication.
+현재 프로젝트는 Spring Security 기본 설정 상태라서, 애플리케이션 실행 시 로그에 출력되는 기본 계정을 사용해야 합니다.
 
-Right now the project uses Spring Security's default generated password. When the app starts, the log prints a line like this:
+- username: `user`
+- password: 애플리케이션 시작 로그에 출력되는 generated password
 
-```text
-Using generated security password: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+### 1. 수동 제재 등록
+
+- 경로: `POST /api/admin/restrictions`
+
+요청 예시:
+
+```json
+{
+  "kakaoUserId": "user-123",
+  "level": "WARNING",
+  "reason": "manual restriction test"
+}
 ```
 
-Username: `user`
+허용되는 `level` 값:
+
+- `WARNING`
+- `TEMPORARY_BAN`
+- `PERMANENT_BAN`
+
+PowerShell 예시:
 
 ```powershell
 $cred = Get-Credential
@@ -109,13 +169,9 @@ Invoke-RestMethod `
   -Body $body
 ```
 
-Allowed `level` values:
+### 2. 사용자 제재 목록 조회
 
-- `WARNING`
-- `TEMPORARY_BAN`
-- `PERMANENT_BAN`
-
-### 3) List restrictions for a user
+- 경로: `GET /api/admin/restrictions?kakaoUserId=user-123`
 
 ```powershell
 $cred = Get-Credential
@@ -127,7 +183,9 @@ Invoke-RestMethod `
   -Credential $cred
 ```
 
-### 4) Get one restriction by id
+### 3. 단건 제재 조회
+
+- 경로: `GET /api/admin/restrictions/{restrictionId}`
 
 ```powershell
 $cred = Get-Credential
@@ -139,21 +197,45 @@ Invoke-RestMethod `
   -Credential $cred
 ```
 
-## Seed Data
+## 초기 데이터
 
-On startup, the app inserts default violation policies automatically.
+애플리케이션 시작 시 기본 위반 정책이 자동으로 저장됩니다.
 
-## Development Commands
+현재 초기화되는 정책 유형:
 
-Run tests:
+- `FORBIDDEN_WORD`
+- `ADVERTISEMENT`
+- `SPAM`
+- `PERSONAL_INFO`
+
+## 데이터 저장 방식
+
+현재 데이터베이스는 H2 In-Memory를 사용합니다.
+
+따라서 애플리케이션을 재시작하면 아래 데이터는 모두 초기화됩니다.
+
+- 회원 정보
+- 위반 기록
+- 제재 기록
+- 정책 데이터
+
+## 개발 명령어
+
+애플리케이션 실행:
+
+```powershell
+.\gradlew.bat bootRun
+```
+
+테스트 실행:
 
 ```powershell
 .\gradlew.bat test
 ```
 
-## Known Gaps
+## 현재 제약 사항
 
-- Tests currently fail because the test code expects Swagger-related setup that is not fully matched by the current dependency/configuration set.
-- Some existing source strings in the project appear to have encoding issues.
-- `SPAM` exists in seeded policy data, but the current judgment flow does not actively detect spam yet.
-- `KakaoApiClient` is still a stub and does not send real external Kakao API requests yet.
+- `KakaoApiClient`는 아직 실제 카카오 외부 API 호출 로직이 완성된 상태는 아닙니다.
+- 관리자 인증은 임시로 Spring Security 기본 인증을 사용합니다.
+- 일부 소스 문자열에 인코딩 문제가 남아 있어 로그나 메시지가 깨져 보일 수 있습니다.
+- 정책 데이터에 `SPAM`은 존재하지만 현재 판단 로직은 개인정보, 금칙어, 광고 위주로 동작합니다.
