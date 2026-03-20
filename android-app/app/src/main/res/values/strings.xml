@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Kakao Warning Bridge</string>
+    <string name="listener_label">Kakao Warning Listener</string>
+    <string name="title">Kakao Warning Bridge</string>
+    <string name="subtitle">카카오톡 알림을 읽고 서버 판정 결과에 따라 자동 경고 답장을 보냅니다.</string>
+    <string name="server_url_hint">서버 URL 예: http://192.168.0.10:8080</string>
+    <string name="allowed_rooms_hint">허용 방 이름, 여러 개면 쉼표로 구분</string>
+    <string name="bot_name_hint">봇 이름 예: 경고봇</string>
+    <string name="enabled_label">자동응답 활성화</string>
+    <string name="save_button">저장</string>
+    <string name="health_check_button">서버 연결 확인</string>
+    <string name="open_listener_settings_button">알림 접근 설정 열기</string>
+    <string name="saved_message">설정을 저장했습니다.</string>
+    <string name="status_idle">대기 중</string>
+    <string name="status_checking">서버 연결 확인 중...</string>
+    <string name="status_server_ok">서버 연결 정상</string>
+    <string name="status_server_fail">서버 연결 실패</string>
+</resources>
