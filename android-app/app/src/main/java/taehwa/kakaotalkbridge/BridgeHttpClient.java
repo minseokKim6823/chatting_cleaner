@@ -96,15 +96,45 @@ public class BridgeHttpClient {
     }
 
     private static String normalize(String serverUrl) {
+        if (serverUrl == null) {
+            return "";
+        }
         return serverUrl.endsWith("/") ? serverUrl.substring(0, serverUrl.length() - 1) : serverUrl;
     }
 
-    public record Decision(
-            boolean shouldReply,
-            String replyMessage,
-            String violationType,
-            String restrictionLevel,
-            String reason
-    ) {
+    public static class Decision {
+        private final boolean shouldReply;
+        private final String replyMessage;
+        private final String violationType;
+        private final String restrictionLevel;
+        private final String reason;
+
+        public Decision(boolean shouldReply, String replyMessage, String violationType, String restrictionLevel, String reason) {
+            this.shouldReply = shouldReply;
+            this.replyMessage = replyMessage;
+            this.violationType = violationType;
+            this.restrictionLevel = restrictionLevel;
+            this.reason = reason;
+        }
+
+        public boolean isShouldReply() {
+            return shouldReply;
+        }
+
+        public String getReplyMessage() {
+            return replyMessage;
+        }
+
+        public String getViolationType() {
+            return violationType;
+        }
+
+        public String getRestrictionLevel() {
+            return restrictionLevel;
+        }
+
+        public String getReason() {
+            return reason;
+        }
     }
 }

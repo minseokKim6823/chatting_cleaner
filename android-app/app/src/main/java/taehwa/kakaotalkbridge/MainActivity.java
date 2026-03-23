@@ -68,10 +68,10 @@ public class MainActivity extends AppCompatActivity {
 
     private void loadSettings() {
         BridgeSettingsRepository.Settings settings = BridgeSettingsRepository.load(this);
-        serverUrlEditText.setText(settings.serverUrl());
-        allowedRoomsEditText.setText(settings.allowedRooms());
-        botNameEditText.setText(settings.botName());
-        enabledCheckBox.setChecked(settings.enabled());
+        serverUrlEditText.setText(settings.getServerUrl());
+        allowedRoomsEditText.setText(settings.getAllowedRooms());
+        botNameEditText.setText(settings.getBotName());
+        enabledCheckBox.setChecked(settings.isEnabled());
     }
 
     private void saveSettings() {

@@ -3,9 +3,8 @@ package taehwa.kakaotalkbridge;
 import android.content.Context;
 import android.content.SharedPreferences;
 
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class BridgeSettingsRepository {
 
@@ -28,28 +27,61 @@ public class BridgeSettingsRepository {
     public static void save(Context context, Settings settings) {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 .edit()
-                .putString(KEY_SERVER_URL, settings.serverUrl())
-                .putString(KEY_ALLOWED_ROOMS, settings.allowedRooms())
-                .putString(KEY_BOT_NAME, settings.botName())
-                .putBoolean(KEY_ENABLED, settings.enabled())
+                .putString(KEY_SERVER_URL, settings.getServerUrl())
+                .putString(KEY_ALLOWED_ROOMS, settings.getAllowedRooms())
+                .putString(KEY_BOT_NAME, settings.getBotName())
+                .putBoolean(KEY_ENABLED, settings.isEnabled())
                 .apply();
     }
 
     public static boolean isRoomAllowed(String allowedRoomsRaw, String room) {
-        if (allowedRoomsRaw == null || allowedRoomsRaw.isBlank()) {
+        if (allowedRoomsRaw == null || allowedRoomsRaw.trim().isEmpty()) {
             return true;
         }
 
-        return splitRooms(allowedRoomsRaw).contains(room.trim());
+        List<String> allowedRooms = splitRooms(allowedRoomsRaw);
+        return allowedRooms.contains(room == null ? "" : room.trim());
     }
 
     private static List<String> splitRooms(String raw) {
-        return Arrays.stream(raw.split(","))
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .collect(Collectors.toList());
+        List<String> rooms = new ArrayList<>();
+        String[] parts = raw.split(",");
+        for (String part : parts) {
+            String trimmed = part.trim();
+            if (!trimmed.isEmpty()) {
+                rooms.add(trimmed);
+            }
+        }
+        return rooms;
     }
 
-    public record Settings(String serverUrl, String allowedRooms, String botName, boolean enabled) {
+    public static class Settings {
+        private final String serverUrl;
+        private final String allowedRooms;
+        private final String botName;
+        private final boolean enabled;
+
+        public Settings(String serverUrl, String allowedRooms, String botName, boolean enabled) {
+            this.serverUrl = serverUrl;
+            this.allowedRooms = allowedRooms;
+            this.botName = botName;
+            this.enabled = enabled;
+        }
+
+        public String getServerUrl() {
+            return serverUrl;
+        }
+
+        public String getAllowedRooms() {
+            return allowedRooms;
+        }
+
+        public String getBotName() {
+            return botName;
+        }
+
+        public boolean isEnabled() {
+            return enabled;
+        }
     }
 }

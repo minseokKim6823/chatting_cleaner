@@ -2,13 +2,12 @@ package taehwa.kakaotalkbridge;
 
 import android.app.Notification;
 import android.app.PendingIntent;
+import android.app.RemoteInput;
 import android.content.Intent;
 import android.os.Bundle;
 import android.service.notification.NotificationListenerService;
 import android.service.notification.StatusBarNotification;
 import android.util.Log;
-
-import androidx.core.app.RemoteInput;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -36,7 +35,7 @@ public class KakaoNotificationListenerService extends NotificationListenerServic
         }
 
         BridgeSettingsRepository.Settings settings = BridgeSettingsRepository.load(this);
-        if (!settings.enabled() || settings.serverUrl().isBlank()) {
+        if (!settings.isEnabled() || isBlank(settings.getServerUrl())) {
             return;
         }
 
@@ -45,11 +44,11 @@ public class KakaoNotificationListenerService extends NotificationListenerServic
             return;
         }
 
-        if (!BridgeSettingsRepository.isRoomAllowed(settings.allowedRooms(), parsedMessage.room())) {
+        if (!BridgeSettingsRepository.isRoomAllowed(settings.getAllowedRooms(), parsedMessage.room)) {
             return;
         }
 
-        if (!settings.botName().isBlank() && settings.botName().equals(parsedMessage.sender())) {
+        if (!isBlank(settings.getBotName()) && settings.getBotName().equals(parsedMessage.sender)) {
             return;
         }
 
@@ -64,17 +63,17 @@ public class KakaoNotificationListenerService extends NotificationListenerServic
 
         executor.execute(() -> {
             BridgeHttpClient.Decision decision = BridgeHttpClient.requestDecision(
-                    settings.serverUrl(),
-                    parsedMessage.room(),
-                    parsedMessage.sender(),
-                    parsedMessage.message()
+                    settings.getServerUrl(),
+                    parsedMessage.room,
+                    parsedMessage.sender,
+                    parsedMessage.message
             );
 
-            if (decision == null || !decision.shouldReply() || decision.replyMessage().isBlank()) {
+            if (decision == null || !decision.isShouldReply() || isBlank(decision.getReplyMessage())) {
                 return;
             }
 
-            sendReply(replyAction, decision.replyMessage());
+            sendReply(replyAction, decision.getReplyMessage());
         });
     }
 
@@ -141,7 +140,7 @@ public class KakaoNotificationListenerService extends NotificationListenerServic
     }
 
     private boolean isDuplicate(ParsedMessage parsedMessage) {
-        String key = parsedMessage.room() + "|" + parsedMessage.sender() + "|" + parsedMessage.message();
+        String key = parsedMessage.room + "|" + parsedMessage.sender + "|" + parsedMessage.message;
         long now = System.currentTimeMillis();
         Long last = recentMessages.put(key, now);
         return last != null && now - last < DUPLICATE_WINDOW_MS;
@@ -157,13 +156,22 @@ public class KakaoNotificationListenerService extends NotificationListenerServic
     }
 
     private boolean isBlank(String value) {
-        return value == null || value.isBlank();
+        return value == null || value.trim().isEmpty();
     }
 
     private String charSequenceToString(CharSequence value) {
         return value == null ? "" : value.toString();
     }
 
-    private record ParsedMessage(String room, String sender, String message) {
+    private static class ParsedMessage {
+        private final String room;
+        private final String sender;
+        private final String message;
+
+        private ParsedMessage(String room, String sender, String message) {
+            this.room = room;
+            this.sender = sender;
+            this.message = message;
+        }
     }
 }
